@@ -10,13 +10,13 @@ Narita et al., “Body Dissatisfaction and Disordered Eating as Pathways Linking
 
 The code implements the parametric mediational g-formula to estimate total effects (TE), natural direct effects (NDE), natural indirect effects (NIE), and proportions mediated (PM). The models account for exposure-mediator and mediator-mediator interactions.
 
-The currently available analysis code covers depressive symptoms in the overall sample, comparing medium versus low and high versus low problematic internet use (PIU). Sex-stratified analyses, other mental health outcomes, and sensitivity analyses are not included in the current repository.
+The currently available analysis code covers depressive symptoms, comparing medium versus low and high versus low problematic internet use (PIU). Sex-stratified analyses, other mental health outcomes, and sensitivity analyses are not included in the current repository.
 
 File organization
 
 The repository contains the following:
 
-mediation for overall sample: R code for parametric mediational g-formula analyses and bootstrap confidence intervals.
+mediation for natural effects: R code for parametric mediational g-formula analyses and bootstrap confidence intervals.
 
 demo data: Synthetic data generation and multiple imputation script for demonstration purposes.
 
@@ -55,7 +55,7 @@ This generates 800 synthetic observations and three imputed datasets, saved loca
 Next, run the mediation analysis in demo mode:
 
 Sys.setenv(RUN_MODE = "demo")
-source("mediation for overall sample")
+source("mediation for natural effects")
 
 Demo mode uses 50 bootstrap samples per imputed dataset, yielding 150 bootstrap estimates per exposure comparison when all model fits succeed.
 
