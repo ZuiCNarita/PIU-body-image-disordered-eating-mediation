@@ -1,6 +1,3 @@
-# PIU-body-image-disordered-eating-mediation
-R code for mediational g-formula analyses of problematic internet use, body dissatisfaction, disordered eating, and adolescent mental health in the Tokyo Teen Cohort.
-
 PIU-body-image-disordered-eating-mediation
 
 R code for mediational g-formula analyses of problematic internet use, body dissatisfaction, disordered eating, and adolescent mental health in the Tokyo Teen Cohort.
@@ -13,33 +10,31 @@ Narita et al., “Body Dissatisfaction and Disordered Eating as Pathways Linking
 
 The code implements the parametric mediational g-formula to estimate total effects (TE), natural direct effects (NDE), natural indirect effects (NIE), and proportions mediated (PM). The models account for exposure-mediator and mediator-mediator interactions.
 
-The currently available code covers the overall-sample analysis of depressive symptoms, comparing medium versus low and high versus low problematic internet use (PIU). Sex-stratified analyses, other mental health outcomes, and sensitivity analyses are not yet included.
+The currently available code covers the overall-sample analysis of depressive symptoms, comparing medium versus low and high versus low problematic internet use (PIU). Sex-stratified analyses, other mental health outcomes, and sensitivity analyses are not included.
 
 File organization
 
-The recommended file structure is as follows:
+This repository contains the following files:
 
-run_analysis.R: Main R script for mediation analysis and bootstrap confidence intervals.
+mediation for overall sample: R script implementing the parametric mediational g-formula and bootstrap confidence intervals for the overall sample.
 
-demo/make_demo_imputed_data.R: Script for generating synthetic data and performing multiple imputation.
+demo data: R script generating synthetic data and performing multiple imputation for demonstration purposes.
 
-README.md: Documentation and instructions.
+README.md: Project documentation and instructions.
 
 LICENSE: MIT License.
 
 .gitignore: Specifies files excluded from version control.
 
-The imputed_data.RData file is generated locally and is not included in this repository.
+The imputed_data.RData file is generated locally and is not included in the repository.
 
 System requirements
 
-Software:
-
-R version 4.5.2 was used for the manuscript analyses.
+The manuscript analyses were conducted using R version 4.5.2.
 
 Required R packages include mice, boot, and randomForest.
 
-To install these packages, run:
+To install the required packages, run:
 
 install.packages(c("mice", "boot", "randomForest"))
 
@@ -53,7 +48,7 @@ First, download or clone the repository and set the working directory to the rep
 
 Generate synthetic data and perform multiple imputation by running:
 
-source("demo/make_demo_imputed_data.R")
+source("demo data")
 
 The demonstration generates 800 synthetic observations and three imputed datasets, which are saved locally in imputed_data.RData.
 
@@ -61,7 +56,7 @@ Next, run the mediation analysis in demo mode:
 
 Sys.setenv(RUN_MODE = "demo")
 
-source("run_analysis.R")
+source("mediation for overall sample")
 
 Demo mode uses 50 bootstrap samples per imputed dataset, producing 150 bootstrap estimates for each exposure comparison when all model fits succeed.
 
@@ -77,7 +72,7 @@ To run the full analysis, execute:
 
 Sys.setenv(RUN_MODE = "full")
 
-source("run_analysis.R")
+source("mediation for overall sample")
 
 Full mode uses 200 bootstrap samples per imputed dataset. With 20 imputed datasets, this produces 4,000 bootstrap estimates per exposure comparison when all model fits succeed.
 
@@ -101,7 +96,7 @@ The synthetic demonstration allows researchers and reviewers to inspect the anal
 
 Because the original cohort data are restricted, the demonstration cannot reproduce the numerical estimates reported in the manuscript.
 
-The full analysis uses 20 imputed datasets and 200 bootstrap samples per dataset. The reduced demo setting is intended for testing and illustration rather than validating the manuscript confidence intervals.
+The full analysis uses 20 imputed datasets and 200 bootstrap samples per dataset. The reduced demo setting uses three imputed datasets and 50 bootstrap samples per dataset and is intended for testing and illustration rather than validating the manuscript confidence intervals.
 
 Data availability
 
