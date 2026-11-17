@@ -10,21 +10,21 @@ Narita et al., “Body Dissatisfaction and Disordered Eating as Pathways Linking
 
 The code implements the parametric mediational g-formula to estimate total effects (TE), natural direct effects (NDE), natural indirect effects (NIE), and proportions mediated (PM). The models account for exposure-mediator and mediator-mediator interactions.
 
-The currently available code covers the overall-sample analysis of depressive symptoms, comparing medium versus low and high versus low problematic internet use (PIU). Sex-stratified analyses, other mental health outcomes, and sensitivity analyses are not included.
+The currently available analysis code covers depressive symptoms in the overall sample, comparing medium versus low and high versus low problematic internet use (PIU). Sex-stratified analyses, other mental health outcomes, and sensitivity analyses are not included in the current repository.
 
 File organization
 
-This repository contains the following files:
+The repository contains the following:
 
-mediation for overall sample: R script implementing the parametric mediational g-formula and bootstrap confidence intervals for the overall sample.
+mediation for overall sample: R code for parametric mediational g-formula analyses and bootstrap confidence intervals.
 
-demo data: R script generating synthetic data and performing multiple imputation for demonstration purposes.
+demo data: Synthetic data generation and multiple imputation script for demonstration purposes.
 
 README.md: Project documentation and instructions.
 
 LICENSE: MIT License.
 
-.gitignore: Specifies files excluded from version control.
+.gitignore: Files excluded from version control.
 
 The imputed_data.RData file is generated locally and is not included in the repository.
 
@@ -38,27 +38,26 @@ To install the required packages, run:
 
 install.packages(c("mice", "boot", "randomForest"))
 
-No specialized hardware is required. Installation times and compatibility across operating systems have not been systematically evaluated.
+No specialized hardware is required. Installation time and operating system compatibility have not been systematically evaluated.
 
 Demo instructions
 
 A demonstration using entirely synthetic data is provided. No actual Tokyo Teen Cohort participant data are included.
 
-First, download or clone the repository and set the working directory to the repository's root directory.
+First, download or clone this repository and set the working directory to the repository's root directory.
 
 Generate synthetic data and perform multiple imputation by running:
 
 source("demo data")
 
-The demonstration generates 800 synthetic observations and three imputed datasets, which are saved locally in imputed_data.RData.
+This generates 800 synthetic observations and three imputed datasets, saved locally as imputed_data.RData.
 
 Next, run the mediation analysis in demo mode:
 
 Sys.setenv(RUN_MODE = "demo")
-
 source("mediation for overall sample")
 
-Demo mode uses 50 bootstrap samples per imputed dataset, producing 150 bootstrap estimates for each exposure comparison when all model fits succeed.
+Demo mode uses 50 bootstrap samples per imputed dataset, yielding 150 bootstrap estimates per exposure comparison when all model fits succeed.
 
 The resulting estimates are illustrative and do not reproduce the numerical findings reported in the manuscript.
 
@@ -71,16 +70,15 @@ Researchers with authorized access must prepare an analytical dataset containing
 To run the full analysis, execute:
 
 Sys.setenv(RUN_MODE = "full")
-
 source("mediation for overall sample")
 
-Full mode uses 200 bootstrap samples per imputed dataset. With 20 imputed datasets, this produces 4,000 bootstrap estimates per exposure comparison when all model fits succeed.
+Full mode uses 200 bootstrap samples per imputed dataset. With 20 imputed datasets, this yields 4,000 bootstrap estimates per exposure comparison when all model fits succeed.
 
-The number of imputed datasets is determined by the input data. Selecting full mode does not automatically create 20 imputations.
+The number of imputations is determined by the input data. Selecting full mode does not automatically generate 20 imputed datasets.
 
 Statistical output
 
-The script reports TE, NDE, NIE, and PM for medium and high PIU compared with low PIU.
+The script reports total effects (TE), natural direct effects (NDE), natural indirect effects (NIE), and proportions mediated (PM).
 
 Bootstrap percentile 95% confidence intervals are calculated for TE, NDE, and NIE.
 
@@ -88,15 +86,15 @@ The proportion mediated is calculated as the natural indirect effect divided by 
 
 PM is reported as a point estimate only. No confidence interval is calculated or reported for PM.
 
-Interpretation of NDE and NIE as causal effects depends on the identification assumptions described in the manuscript.
+The causal interpretation of NDE and NIE depends on the identification assumptions described in the manuscript.
 
 Reproducibility
 
-The synthetic demonstration allows researchers and reviewers to inspect the analytical workflow and test the code without access to confidential participant data.
+The synthetic demonstration allows researchers and reviewers to examine the analytical workflow and test the code without access to confidential participant data.
 
 Because the original cohort data are restricted, the demonstration cannot reproduce the numerical estimates reported in the manuscript.
 
-The full analysis uses 20 imputed datasets and 200 bootstrap samples per dataset. The reduced demo setting uses three imputed datasets and 50 bootstrap samples per dataset and is intended for testing and illustration rather than validating the manuscript confidence intervals.
+The full analysis uses 20 imputed datasets and 200 bootstrap samples per dataset. The reduced demo setting uses three imputed datasets and 50 bootstrap samples per dataset and is intended for testing rather than reproducing manuscript confidence intervals.
 
 Data availability
 
