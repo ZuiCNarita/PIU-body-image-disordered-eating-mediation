@@ -10,21 +10,19 @@ Narita et al., “Body Dissatisfaction and Disordered Eating as Pathways Linking
 
 The code implements the parametric mediational g-formula to estimate total effects (TE), natural direct effects (NDE), natural indirect effects (NIE), and proportions mediated (PM). The models account for exposure-mediator and mediator-mediator interactions.
 
-The currently available analysis code covers depressive symptoms, comparing medium versus low and high versus low problematic internet use (PIU). Sex-stratified analyses, other mental health outcomes, and sensitivity analyses are not included in the current repository.
+The available analysis code covers depressive symptoms (SMFQ) in the overall sample and in sex-stratified analyses (girls and boys), comparing medium versus low and high versus low problematic internet use (PIU). Other mental health outcomes and sensitivity analyses are not included in the current repository.
 
 File organization
 
-The repository contains the following:
+The repository contains the following files:
 
-mediation for natural effects: R code for parametric mediational g-formula analyses and bootstrap confidence intervals.
+mediation for natural effects: R code for parametric mediational g-formula analyses and bootstrap confidence intervals for the overall sample, girls, and boys.
 
-demo data: Synthetic data generation and multiple imputation script for demonstration purposes.
+demo data: R script generating synthetic data and performing multiple imputation for demonstration purposes.
 
 README.md: Project documentation and instructions.
 
 LICENSE: MIT License.
-
-.gitignore: Files excluded from version control.
 
 The imputed_data.RData file is generated locally and is not included in the repository.
 
@@ -52,12 +50,11 @@ source("demo data")
 
 This generates 800 synthetic observations and three imputed datasets, saved locally as imputed_data.RData.
 
-Next, run the mediation analysis in demo mode:
+Next, run the mediation analysis:
 
-Sys.setenv(RUN_MODE = "demo")
 source("mediation for natural effects")
 
-Demo mode uses 50 bootstrap samples per imputed dataset, yielding 150 bootstrap estimates per exposure comparison when all model fits succeed.
+The analysis uses 200 bootstrap samples per imputed dataset. With three imputed datasets, this yields 600 bootstrap estimates per exposure comparison when all model fits succeed.
 
 The resulting estimates are illustrative and do not reproduce the numerical findings reported in the manuscript.
 
@@ -67,18 +64,19 @@ The Tokyo Teen Cohort participant data are not publicly available because of eth
 
 Researchers with authorized access must prepare an analytical dataset containing the required variables and perform multiple imputation. The resulting mice object should be named df_miced and saved in a file named imputed_data.RData in the repository's root directory.
 
-To run the full analysis, execute:
+To run the analysis, execute:
 
-Sys.setenv(RUN_MODE = "full")
-source("mediation for overall sample")
+source("mediation for natural effects")
 
-Full mode uses 200 bootstrap samples per imputed dataset. With 20 imputed datasets, this yields 4,000 bootstrap estimates per exposure comparison when all model fits succeed.
+The analysis uses 200 bootstrap samples per imputed dataset. With 20 imputed datasets, this yields 4,000 bootstrap estimates per exposure comparison when all model fits succeed.
 
-The number of imputations is determined by the input data. Selecting full mode does not automatically generate 20 imputed datasets.
+The number of imputed datasets is determined by the input data.
 
 Statistical output
 
-The script reports total effects (TE), natural direct effects (NDE), natural indirect effects (NIE), and proportions mediated (PM).
+The script reports total effects (TE), natural direct effects (NDE), natural indirect effects (NIE), and proportions mediated (PM) for the overall sample, girls, and boys.
+
+For each population, medium versus low and high versus low PIU are examined.
 
 Bootstrap percentile 95% confidence intervals are calculated for TE, NDE, and NIE.
 
@@ -94,7 +92,7 @@ The synthetic demonstration allows researchers and reviewers to examine the anal
 
 Because the original cohort data are restricted, the demonstration cannot reproduce the numerical estimates reported in the manuscript.
 
-The full analysis uses 20 imputed datasets and 200 bootstrap samples per dataset. The reduced demo setting uses three imputed datasets and 50 bootstrap samples per dataset and is intended for testing rather than reproducing manuscript confidence intervals.
+The manuscript analysis uses 20 imputed datasets and 200 bootstrap samples per dataset. The synthetic demonstration uses three imputed datasets and 200 bootstrap samples per dataset.
 
 Data availability
 
