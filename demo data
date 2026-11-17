@@ -1,0 +1,115 @@
+# Synthetic demonstration data for the PIU/body-image mediation code.
+# All observations are artificial; NO Tokyo Teen Cohort participant data are used.
+#
+# From the repository root:
+#   source("demo/make_demo_imputed_data.R")
+# This creates ./imputed_data.RData containing the mice 'mids' object df_miced,
+# which is the filename/object expected by the current main analysis script.
+# IMPORTANT: imputed_data.RData MUST be excluded from Git/GitHub.
+
+if (!requireNamespace("mice", quietly = TRUE)) {
+  stop("Package 'mice' is required. Install it with install.packages('mice').")
+}
+
+out_file <- "imputed_data.RData"
+if (file.exists(out_file)) {
+  stop(paste0(
+    "Refusing to overwrite ", out_file,
+    ". Move it aside only after confirming that it does not contain restricted cohort data."
+  ))
+}
+
+set.seed(20261117)
+n <- 800L                    # Synthetic participants (chosen for stable model fits)
+m_demo <- 3L                # Small number of imputations for a demonstration only
+
+# The analysis compares QpiuT1=1 and QpiuT1=2 separately against QpiuT1=0.
+# Keep QpiuT1 as a factor with all three levels in the completed data.
+QpiuT1 <- factor(
+  sample(c("0", "1", "2"), size = n, replace = TRUE,
+         prob = c(0.36, 0.33, 0.31)),
+  levels = c("0", "1", "2")
+)
+piu_score <- as.integer(as.character(QpiuT1))
+
+# Baseline characteristics. Values are illustrative, not reconstructed TTC data.
+girl <- rbinom(n, 1, 0.5)
+AA1age <- rnorm(n, mean = 12.2, sd = 0.3)
+bmiT1 <- pmax(12, rnorm(n, 18 + 0.3 * girl, 2.5))
+punishT1 <- rbinom(n, 1, 0.28)
+cohesionT1 <- pmax(1, rnorm(n, 13, 3))
+incomeT1 <- factor(sample(c("1", "2", "3"), n, replace = TRUE,
+                          prob = c(0.22, 0.48, 0.30)),
+                   levels = c("1", "2", "3"))
+AA79Fsep <- rbinom(n, 1, 0.13)
+BFIQ <- rnorm(n, 110, 15)
+behavesubT1 <- rbinom(n, 1, 0.24)
+mothernriT1 <- rnorm(n, 3.7, 0.9)
+fathernriT1 <- rnorm(n, 3.4, 1.1)
+friendnriT1 <- rnorm(n, 3.5, 0.9)
+sdqbulliedT1 <- rbinom(n, 1, 0.17)
+coffeeT1 <- rbinom(n, 1, 0.10)
+noexerciseMT1 <- rbinom(n, 1, 0.15)
+smfqT1 <- pmin(26, pmax(0, round(rnorm(n, 3.3 + girl + 0.6 * piu_score, 3.3))))
+bodydisT1 <- rnorm(n, 0.3 + 0.4 * girl + 0.12 * piu_score, 1.2)
+bingeT1 <- rbinom(n, 1, plogis(-1.7 + 0.25 * girl + 0.2 * piu_score))
+purgeT1 <- rbinom(n, 1, plogis(-2.1 + 0.25 * girl + 0.2 * piu_score))
+
+# Generate synthetic mediators and outcome with modest illustrative associations.
+bodydisT2 <- rnorm(n,
+  mean = 0.2 + 0.35 * girl + 0.22 * piu_score + 0.35 * bodydisT1,
+  sd = 1.1
+)
+bingeT2 <- rbinom(n, 1, plogis(
+  -1.65 + 0.25 * piu_score + 0.22 * bodydisT2 + 0.55 * bingeT1
+))
+purgeT2 <- rbinom(n, 1, plogis(
+  -1.95 + 0.20 * piu_score + 0.18 * bodydisT2 + 0.65 * purgeT1
+))
+smfqT3 <- pmin(26, pmax(0,
+  2.4 + 0.45 * piu_score + 0.65 * girl + 0.35 * bodydisT2 +
+    0.9 * bingeT2 + 0.8 * purgeT2 + 0.45 * smfqT1 + rnorm(n, 0, 3.1)
+))
+
+data_imputed <- data.frame(
+  QpiuT1, AA1age, girl, bmiT1, punishT1, cohesionT1, incomeT1,
+  AA79Fsep, BFIQ, behavesubT1, mothernriT1, fathernriT1,
+  friendnriT1, sdqbulliedT1, coffeeT1, noexerciseMT1,
+  smfqT1, bodydisT1, bingeT1, purgeT1,
+  bodydisT2, bingeT2, purgeT2, smfqT3
+)
+
+# Introduce some synthetic missingness to exercise random-forest imputation.
+add_missing <- function(x, fraction = 0.05) {
+  missing_rows <- sample.int(length(x), size = floor(length(x) * fraction))
+  x[missing_rows] <- NA
+  x
+}
+for (column in c("bmiT1", "mothernriT1", "bodydisT2", "smfqT3")) {
+  data_imputed[[column]] <- add_missing(data_imputed[[column]])
+}
+
+# Use random-forest imputation as in the paper, but with fewer imputations
+# and iterations than the full analysis to keep this demonstration practical.
+initial <- mice::mice(data_imputed, maxit = 0, printFlag = FALSE)
+methods <- initial$method
+methods[nzchar(methods)] <- "rf"
+df_miced <- mice::mice(
+  data_imputed,
+  m = m_demo,
+  maxit = 2L,
+  method = methods,
+  ntree = 10L,
+  seed = 11111,
+  printFlag = FALSE
+)
+
+stopifnot(inherits(df_miced, "mids"))
+stopifnot(identical(levels(mice::complete(df_miced, 1)$QpiuT1),
+                    c("0", "1", "2")))
+
+save(df_miced, file = out_file)
+cat("Created", out_file, "with", n, "synthetic observations and",
+    m_demo, "imputed datasets.\n")
+cat("For a quick smoke test, temporarily lower n_bootstrap in the main script;\n")
+cat("restore n_bootstrap=200 and use the authorized real dataset for reported results.\n")
