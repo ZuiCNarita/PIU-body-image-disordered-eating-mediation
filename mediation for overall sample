@@ -1,7 +1,17 @@
 library(mice)
 library(boot)
-set.seed(123) 
-n_bootstrap <- 200
+set.seed(123)
+
+# Bootstrap samples per imputed dataset:
+# - RUN_MODE=demo: 50 (synthetic-data demonstration only)
+# - default/full: 200 (manuscript setting)
+# Note: the number of imputations is determined by df_miced$m.
+run_mode <- tolower(Sys.getenv("RUN_MODE", unset = "full"))
+if (!(run_mode %in% c("demo", "full"))) {
+  stop("RUN_MODE must be 'demo' or 'full'.")
+}
+n_bootstrap <- if (run_mode == "demo") 50L else 200L
+message("RUN_MODE=", run_mode, "; n_bootstrap=", n_bootstrap, " per imputed dataset")
 
 ####overall
 load("imputed_data.RData") 
@@ -74,7 +84,7 @@ effect_estimates_modified_fn <- function(data, indices) {
   realized_purge_hist_A0_0 <- sim_data_A0_0[, c("purgeT2")]
   realized_purge_hist_A0_1 <- sim_data_A0_1[, c("purgeT2")]
   
-  # Obtain G terms by permuting mediators
+  # Simulated mediator histories for each exposure level (no permutation)
   G_bodydis_hist_A0_0 <- realized_bodydis_hist_A0_0
   G_bodydis_hist_A0_1 <- realized_bodydis_hist_A0_1
   
@@ -112,16 +122,16 @@ effect_estimates_modified_fn <- function(data, indices) {
                                                                                         G_bodydis_hist_A0_1, G_binge_hist_A0_1, G_purge_hist_A0_1), type = "response"), na.rm=TRUE)
   
   
-  # Calculate TE, IDE, and TIE
-  IDE <- Q_A1_G0_L1 - Q_A0_G0_L0
-  TIE <- Q_A1_G1_L1 - Q_A1_G0_L1
+  # Calculate TE, NDE, and NIE
+  NDE <- Q_A1_G0_L1 - Q_A0_G0_L0
+  NIE <- Q_A1_G1_L1 - Q_A1_G0_L1
   
   EY_A0_1_natural <- mean(predict(outcome_model_T3, newdata = sim_data_A0_1, type = "response"), na.rm=TRUE)
   EY_A0_0_natural <- mean(predict(outcome_model_T3, newdata = sim_data_A0_0, type = "response"), na.rm=TRUE)
   TE  <- EY_A0_1_natural - EY_A0_0_natural
   
   
-  return(c(TE = TE, IDE = IDE, TIE = TIE))
+  return(c(TE = TE, NDE = NDE, NIE = NIE))
 }
 
 # Run on imputed datasets
@@ -153,23 +163,23 @@ results_list_modified <- lapply(1:df_miced$m, function(i) {
 
 # Pooled means
 results_df_modified <- do.call(rbind, results_list_modified)
-mean_col_names_modified <- c("TE", "IDE", "TIE")
+mean_col_names_modified <- c("TE", "NDE", "NIE")
 means_modified <- colMeans(results_df_modified[, mean_col_names_modified], na.rm = TRUE)
 
 # Averaged estimates
 TE_mean_final <- means_modified["TE"]
-IDE_mean_final <- means_modified["IDE"]
-TIE_mean_final <- means_modified["TIE"]
+NDE_mean_final <- means_modified["NDE"]
+NIE_mean_final <- means_modified["NIE"]
 
 # Calculate PM 
 PM_final <- NA
-if (!is.na(TE_mean_final) && TE_mean_final != 0 && !is.na(TIE_mean_final)) {
-  PM_final <- TIE_mean_final / TE_mean_final
+if (!is.na(TE_mean_final) && TE_mean_final != 0 && !is.na(NIE_mean_final)) {
+  PM_final <- NIE_mean_final / TE_mean_final
 }
 
 ## Bootstrap CIs
 all_imputation_bootstrap_results <- list()
-metric_names <- c("TE", "IDE", "TIE")
+metric_names <- c("TE", "NDE", "NIE")
 
 # Loop through each imputed dataset
 for (i in 1:df_miced$m) {
@@ -212,8 +222,8 @@ boot_means_1000 <- colMeans(pooled_bootstrap_results_df[, metric_names, drop = F
 
 PM_boot_mean_1000 <- NA_real_
 if (!is.na(boot_means_1000["TE"]) && boot_means_1000["TE"] != 0 &&
-    !is.na(boot_means_1000["TIE"])) {
-  PM_boot_mean_1000 <- boot_means_1000["TIE"] / boot_means_1000["TE"]
+    !is.na(boot_means_1000["NIE"])) {
+  PM_boot_mean_1000 <- boot_means_1000["NIE"] / boot_means_1000["TE"]
 }
 
 # Percentile boot CIs
@@ -230,27 +240,19 @@ calculate_percentile_ci <- function(estimates) {
 }
 
 ci_TE <- calculate_percentile_ci(pooled_bootstrap_results_df[, "TE"])
-ci_IDE <- calculate_percentile_ci(pooled_bootstrap_results_df[, "IDE"])
-ci_TIE <- calculate_percentile_ci(pooled_bootstrap_results_df[, "TIE"])
+ci_NDE <- calculate_percentile_ci(pooled_bootstrap_results_df[, "NDE"])
+ci_NIE <- calculate_percentile_ci(pooled_bootstrap_results_df[, "NIE"])
 
-pooled_bootstrap_results_df$PM <- NA_real_ # Initialize with NA_real_ for numeric type
-valid_te_pm <- pooled_bootstrap_results_df$TE != 0 & !is.na(pooled_bootstrap_results_df$TE)
-valid_tie_pm <- !is.na(pooled_bootstrap_results_df$TIE)
-valid_pm_rows <- valid_te_pm & valid_tie_pm
-pooled_bootstrap_results_df$PM[valid_pm_rows] <-
-  pooled_bootstrap_results_df$TIE[valid_pm_rows] /
-  pooled_bootstrap_results_df$TE[valid_pm_rows]
-ci_PM <- calculate_percentile_ci(pooled_bootstrap_results_df[, "PM"])
 
 # Print bootstrap means and CIs (ALL m*n_bootstrap estimates)
 print(paste("Bootstrap mean (ALL", df_miced$m * n_bootstrap, "estimates) TE:", round(boot_means_1000["TE"], 4)))
-print(paste("Bootstrap mean (ALL", df_miced$m * n_bootstrap, "estimates) IDE:", round(boot_means_1000["IDE"], 4)))
-print(paste("Bootstrap mean (ALL", df_miced$m * n_bootstrap, "estimates) TIE:", round(boot_means_1000["TIE"], 4)))
-print(paste("Bootstrap mean (ALL", df_miced$m * n_bootstrap, "estimates) PM (mean TIE / mean TE):", round(PM_boot_mean_1000, 4)))
+print(paste("Bootstrap mean (ALL", df_miced$m * n_bootstrap, "estimates) NDE:", round(boot_means_1000["NDE"], 4)))
+print(paste("Bootstrap mean (ALL", df_miced$m * n_bootstrap, "estimates) NIE:", round(boot_means_1000["NIE"], 4)))
+print(paste("Bootstrap mean (ALL", df_miced$m * n_bootstrap, "estimates) PM (mean NIE / mean TE):", round(PM_boot_mean_1000, 4)))
 
 print(paste0("TE  (95% CI: ", round(ci_TE[1], 4), ", ", round(ci_TE[2], 4), ")"))
-print(paste0("IDE (95% CI: ", round(ci_IDE[1], 4), ", ", round(ci_IDE[2], 4), ")"))
-print(paste0("TIE (95% CI: ", round(ci_TIE[1], 4), ", ", round(ci_TIE[2], 4), ")"))
+print(paste0("NDE (95% CI: ", round(ci_NDE[1], 4), ", ", round(ci_NDE[2], 4), ")"))
+print(paste0("NIE (95% CI: ", round(ci_NIE[1], 4), ", ", round(ci_NIE[2], 4), ")"))
 
 ##QpiuThigh
 # Parametric mediation g-formula
@@ -320,7 +322,7 @@ effect_estimates_modified_fn <- function(data, indices) {
   realized_purge_hist_A0_0 <- sim_data_A0_0[, c("purgeT2")]
   realized_purge_hist_A0_1 <- sim_data_A0_1[, c("purgeT2")]
   
-  # Obtain G terms by permuting mediators
+  # Simulated mediator histories for each exposure level (no permutation)
   G_bodydis_hist_A0_0 <- realized_bodydis_hist_A0_0
   G_bodydis_hist_A0_1 <- realized_bodydis_hist_A0_1
   
@@ -358,16 +360,16 @@ effect_estimates_modified_fn <- function(data, indices) {
                                                                                         G_bodydis_hist_A0_1, G_binge_hist_A0_1, G_purge_hist_A0_1), type = "response"), na.rm=TRUE)
   
   
-  # Calculate TE, IDE, and TIE
-  IDE <- Q_A1_G0_L1 - Q_A0_G0_L0
-  TIE <- Q_A1_G1_L1 - Q_A1_G0_L1
+  # Calculate TE, NDE, and NIE
+  NDE <- Q_A1_G0_L1 - Q_A0_G0_L0
+  NIE <- Q_A1_G1_L1 - Q_A1_G0_L1
   
   EY_A0_1_natural <- mean(predict(outcome_model_T3, newdata = sim_data_A0_1, type = "response"), na.rm=TRUE)
   EY_A0_0_natural <- mean(predict(outcome_model_T3, newdata = sim_data_A0_0, type = "response"), na.rm=TRUE)
   TE  <- EY_A0_1_natural - EY_A0_0_natural
   
   
-  return(c(TE = TE, IDE = IDE, TIE = TIE))
+  return(c(TE = TE, NDE = NDE, NIE = NIE))
 }
 
 # Run on imputed datasets
@@ -399,23 +401,23 @@ results_list_modified <- lapply(1:df_miced$m, function(i) {
 
 # Pooled means
 results_df_modified <- do.call(rbind, results_list_modified)
-mean_col_names_modified <- c("TE", "IDE", "TIE")
+mean_col_names_modified <- c("TE", "NDE", "NIE")
 means_modified <- colMeans(results_df_modified[, mean_col_names_modified], na.rm = TRUE)
 
 # Averaged estimates
 TE_mean_final <- means_modified["TE"]
-IDE_mean_final <- means_modified["IDE"]
-TIE_mean_final <- means_modified["TIE"]
+NDE_mean_final <- means_modified["NDE"]
+NIE_mean_final <- means_modified["NIE"]
 
 # Calculate PM 
 PM_final <- NA
-if (!is.na(TE_mean_final) && TE_mean_final != 0 && !is.na(TIE_mean_final)) {
-  PM_final <- TIE_mean_final / TE_mean_final
+if (!is.na(TE_mean_final) && TE_mean_final != 0 && !is.na(NIE_mean_final)) {
+  PM_final <- NIE_mean_final / TE_mean_final
 }
 
 ## Bootstrap CIs
 all_imputation_bootstrap_results <- list()
-metric_names <- c("TE", "IDE", "TIE")
+metric_names <- c("TE", "NDE", "NIE")
 
 # Loop through each imputed dataset
 for (i in 1:df_miced$m) {
@@ -458,8 +460,8 @@ boot_means_1000 <- colMeans(pooled_bootstrap_results_df[, metric_names, drop = F
 
 PM_boot_mean_1000 <- NA_real_
 if (!is.na(boot_means_1000["TE"]) && boot_means_1000["TE"] != 0 &&
-    !is.na(boot_means_1000["TIE"])) {
-  PM_boot_mean_1000 <- boot_means_1000["TIE"] / boot_means_1000["TE"]
+    !is.na(boot_means_1000["NIE"])) {
+  PM_boot_mean_1000 <- boot_means_1000["NIE"] / boot_means_1000["TE"]
 }
 
 # Percentile boot CIs
@@ -476,24 +478,16 @@ calculate_percentile_ci <- function(estimates) {
 }
 
 ci_TE <- calculate_percentile_ci(pooled_bootstrap_results_df[, "TE"])
-ci_IDE <- calculate_percentile_ci(pooled_bootstrap_results_df[, "IDE"])
-ci_TIE <- calculate_percentile_ci(pooled_bootstrap_results_df[, "TIE"])
+ci_NDE <- calculate_percentile_ci(pooled_bootstrap_results_df[, "NDE"])
+ci_NIE <- calculate_percentile_ci(pooled_bootstrap_results_df[, "NIE"])
 
-pooled_bootstrap_results_df$PM <- NA_real_ # Initialize with NA_real_ for numeric type
-valid_te_pm <- pooled_bootstrap_results_df$TE != 0 & !is.na(pooled_bootstrap_results_df$TE)
-valid_tie_pm <- !is.na(pooled_bootstrap_results_df$TIE)
-valid_pm_rows <- valid_te_pm & valid_tie_pm
-pooled_bootstrap_results_df$PM[valid_pm_rows] <-
-  pooled_bootstrap_results_df$TIE[valid_pm_rows] /
-  pooled_bootstrap_results_df$TE[valid_pm_rows]
-ci_PM <- calculate_percentile_ci(pooled_bootstrap_results_df[, "PM"])
 
 # Print bootstrap means and CIs (ALL m*n_bootstrap estimates)
 print(paste("Bootstrap mean (ALL", df_miced$m * n_bootstrap, "estimates) TE:", round(boot_means_1000["TE"], 4)))
-print(paste("Bootstrap mean (ALL", df_miced$m * n_bootstrap, "estimates) IDE:", round(boot_means_1000["IDE"], 4)))
-print(paste("Bootstrap mean (ALL", df_miced$m * n_bootstrap, "estimates) TIE:", round(boot_means_1000["TIE"], 4)))
-print(paste("Bootstrap mean (ALL", df_miced$m * n_bootstrap, "estimates) PM (mean TIE / mean TE):", round(PM_boot_mean_1000, 4)))
+print(paste("Bootstrap mean (ALL", df_miced$m * n_bootstrap, "estimates) NDE:", round(boot_means_1000["NDE"], 4)))
+print(paste("Bootstrap mean (ALL", df_miced$m * n_bootstrap, "estimates) NIE:", round(boot_means_1000["NIE"], 4)))
+print(paste("Bootstrap mean (ALL", df_miced$m * n_bootstrap, "estimates) PM (mean NIE / mean TE):", round(PM_boot_mean_1000, 4)))
 
 print(paste0("TE  (95% CI: ", round(ci_TE[1], 4), ", ", round(ci_TE[2], 4), ")"))
-print(paste0("IDE (95% CI: ", round(ci_IDE[1], 4), ", ", round(ci_IDE[2], 4), ")"))
-print(paste0("TIE (95% CI: ", round(ci_TIE[1], 4), ", ", round(ci_TIE[2], 4), ")"))
+print(paste0("NDE (95% CI: ", round(ci_NDE[1], 4), ", ", round(ci_NDE[2], 4), ")"))
+print(paste0("NIE (95% CI: ", round(ci_NIE[1], 4), ", ", round(ci_NIE[2], 4), ")"))
